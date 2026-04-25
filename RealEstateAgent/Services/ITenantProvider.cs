@@ -1,4 +1,4 @@
-﻿namespace RealEstateAgent
+﻿namespace RealEstateAgent.Services
 {
     public interface ITenantProvider
     {
