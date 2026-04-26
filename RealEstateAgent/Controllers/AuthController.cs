@@ -67,7 +67,66 @@ namespace RealEstateAgent.Controllers
                 }
             );
         }
-
+        [HttpPost("onboarding")]
+        public async Task<IActionResult> Onboarding([FromBody] OnboardingEntity dto)
+        {
+            if (await _appDbContext.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == dto.Email))
+            {
+                return BadRequest("User with this email already exists!");
+            }
+            Tenant tenant = new Tenant
+            {
+                TenantId = Guid.NewGuid(),
+                Name = dto.TenantName,
+            };
+            _appDbContext.Tenants.Add(tenant);
+            ApplicationUser user = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenant.TenantId,
+                Email = dto.Email,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                isActive = true,
+                UserName = dto.Email
+            };
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Errors);
+            }
+            await _userManager.AddToRolesAsync(user, ["Admin"]);
+            string accessToken = _jwtService.GenerateAccessToken(user, ["Admin"]);
+            string refreshToken = _jwtService.GenerateRefreshToken();
+            RefreshToken refreshTokenEnity = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
+            };
+            _appDbContext.RefreshTokens.Add(refreshTokenEnity);
+            await _appDbContext.SaveChangesAsync();
+            Response.Cookies.Append("accessToken", accessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
+            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
+            return Ok(new
+                {
+                    id = user.Id,
+                    email = user.Email
+                }
+            );
+        }
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginEntity loginEntity)
         {

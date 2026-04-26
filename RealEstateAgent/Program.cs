@@ -6,6 +6,7 @@ using RealEstateAgent.Data;
 using RealEstateAgent.Models;
 using RealEstateAgent.Services;
 using RealEstateAgent.Settings;
+using Scalar.AspNetCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -96,6 +97,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
